@@ -1,405 +1,142 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="theme-color" content="#050505">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>МАТРИЦА • 2026 GROK xAI</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.0/styles/atom-one-dark.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.0/highlight.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/15.0.0/marked.min.js"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap');
-        
-        :root { --neon: #00f5ff; --glass: rgba(5,5,5,0.96); }
-        
-        * { transition: all 0.3s cubic-bezier(0.23,1,0.32,1); }
-        
-        body {
-            font-family: 'Inter', system-ui, sans-serif;
-            background: #050505;
-            color: #e0e0e0;
-            overflow: hidden;
-            touch-action: manipulation;
-        }
-        
-        .glass { background: var(--glass); backdrop-filter: blur(40px); border: 1px solid rgba(255,255,255,0.1); }
-        
-        .neon-text { text-shadow: 0 0 30px var(--neon), 0 0 70px var(--neon); }
-        
-        .chat-container::-webkit-scrollbar { display: none; }
-        
-        .message { animation: messagePop 0.6s cubic-bezier(0.34,1.56,0.64,1) backwards; }
-        
-        @keyframes messagePop {
-            0% { opacity:0; transform:scale(0.6) translateY(100px); }
-            100% { opacity:1; transform:scale(1) translateY(0); }
-        }
-        
-        .particle { position:absolute; pointer-events:none; z-index:10; }
-        
-        .matrix-rain { position:fixed; inset:0; z-index:-2; opacity:0.25; mix-blend-mode:screen; }
-        
-        button, .haptic { -webkit-tap-highlight-color: transparent; }
-        
-        .glow { box-shadow: 0 0 30px #00f5ff; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Чат с Mistral (Бесплатно)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+body { background: #0f0f0f; color: #e0e0e0; font-family: system-ui, sans-serif; }
+#messages { scrollbar-width: thin; scrollbar-color: #444 #1a1a1a; }
+#messages::-webkit-scrollbar { width: 6px; }
+#messages::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+.msg-user { background: #2563eb; color: white; align-self: flex-end; max-width: 85%; }
+.msg-ai   { background: #374151; align-self: flex-start; max-width: 90%; }
+.fade-in { animation: fadeIn 0.4s ease-in; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+textarea { resize: none; }
+button:active { transform: scale(0.96); }
+</style>
 </head>
-<body class="min-h-screen flex flex-col">
-    <canvas id="bgCanvas" class="fixed inset-0 z-[-3]"></canvas>
-    <canvas id="matrixCanvas" class="matrix-rain"></canvas>
+<body class="flex flex-col h-screen">
 
-    <div class="flex h-screen overflow-hidden relative">
-        <!-- SIDEBAR -->
-        <div id="sidebar" class="w-80 glass border-r border-white/10 flex flex-col fixed lg:relative h-full -translate-x-full lg:translate-x-0 transition-transform duration-300 z-50">
-            <div class="p-6 border-b border-white/10 flex items-center gap-4">
-                <div class="w-11 h-11 bg-gradient-to-br from-cyan-400 to-pink-500 rounded-3xl flex items-center justify-center text-4xl font-black neon-text">M</div>
-                <div>
-                    <h1 class="text-4xl font-bold tracking-[-4px] neon-text">МАТРИЦА</h1>
-                    <p class="text-xs text-cyan-400">xAI GROK • 2026</p>
-                </div>
-                <button onclick="toggleSidebar()" class="lg:hidden ml-auto text-4xl">✕</button>
-            </div>
+<header class="bg-gray-900 p-4 border-b border-gray-700 flex justify-between items-center">
+<h1 class="text-xl font-bold">Чат с Mistral</h1>
+<div class="flex gap-4">
+  <button id="clear" class="text-red-400 hover:text-red-300 text-sm"><i class="fas fa-trash-alt"></i> Очистить</button>
+</div>
+</header>
 
-            <div class="p-6">
-                <button onclick="newChat()" class="w-full h-14 bg-gradient-to-r from-cyan-400 to-pink-500 rounded-3xl text-black font-bold text-xl flex items-center justify-center gap-3 glow">
-                    <i class="fa-solid fa-plus"></i> НОВЫЙ ЧАТ
-                </button>
-            </div>
+<div id="messages" class="flex-1 overflow-y-auto p-4 space-y-4 flex flex-col"></div>
 
-            <div id="chatsList" class="flex-1 overflow-y-auto px-4 py-3 space-y-1 chat-container"></div>
+<div class="bg-gray-900 border-t border-gray-700 p-4">
+<div class="flex gap-2 max-w-4xl mx-auto">
+  <textarea id="input" rows="1" placeholder="Напиши сообщение..." 
+            class="flex-1 bg-gray-800 border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-blue-500"></textarea>
+  <button id="send" class="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center text-white">
+    <i class="fas fa-paper-plane"></i>
+  </button>
+  <button id="voice" class="w-12 h-12 bg-gray-700 rounded-lg flex items-center justify-center text-white">
+    <i class="fas fa-microphone"></i>
+  </button>
+</div>
+<div id="status" class="text-center text-sm text-gray-400 mt-2">готов</div>
+</div>
 
-            <div class="p-6 border-t border-white/10">
-                <div onclick="showModelsModal()" class="glass p-5 rounded-3xl flex items-center gap-4 cursor-pointer hover:border-cyan-400">
-                    <div class="flex-1">
-                        <div id="currentModelName" class="font-semibold text-lg">Grok-2026</div>
-                        <div id="currentModelProvider" class="text-cyan-400 text-xs">xAI</div>
-                    </div>
-                    <i class="fa-solid fa-chevron-down"></i>
-                </div>
-            </div>
-        </div>
+<script>
+// === Бесплатный Mistral Demo API ===
+const MISTRAL_DEMO_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0"; 
 
-        <!-- MAIN -->
-        <div class="flex-1 flex flex-col">
-            <div class="h-16 glass border-b flex items-center px-6 justify-between">
-                <div class="flex items-center gap-4">
-                    <button onclick="toggleSidebar()" class="lg:hidden text-3xl"><i class="fa-solid fa-bars"></i></button>
-                    <div id="chatTitle" onclick="renameCurrentChat()" class="text-2xl font-semibold cursor-pointer neon-text">Добро пожаловать в Матрицу</div>
-                </div>
-                <div class="flex items-center gap-6 text-2xl">
-                    <button onclick="installApp()" id="installBtn" class="hidden text-cyan-400"><i class="fa-solid fa-download"></i></button>
-                    <button onclick="toggleThemeGallery()" class="haptic"><i class="fa-solid fa-palette"></i></button>
-                    <button onclick="clearCurrentChat()" class="text-red-400 haptic"><i class="fa-solid fa-trash"></i></button>
-                </div>
-            </div>
+let messages = JSON.parse(localStorage.getItem('chat_history') || '[]');
 
-            <div id="messages" class="flex-1 overflow-y-auto p-6 space-y-8 chat-container bg-black/40"></div>
+function addMsg(role, text) {
+  messages.push({ role, text });
+  localStorage.setItem('chat_history', JSON.stringify(messages));
 
-            <div class="glass border-t p-5">
-                <div class="max-w-4xl mx-auto">
-                    <div id="attachmentsPreview" class="flex gap-3 mb-4"></div>
-                    
-                    <div class="relative">
-                        <textarea id="userInput" rows="1" 
-                                  class="w-full bg-zinc-950 border border-white/20 focus:border-cyan-400 rounded-3xl py-6 px-8 text-lg outline-none resize-none"
-                                  placeholder="Напиши Матрице..." 
-                                  onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();sendMessage();}"></textarea>
-                        
-                        <div class="absolute bottom-4 right-4 flex gap-2">
-                            <button onclick="toggleVoiceInput()" id="voiceBtn" class="h-12 w-12 flex items-center justify-center text-3xl rounded-3xl"><i class="fa-solid fa-microphone"></i></button>
-                            <button onclick="attachFile()" class="h-12 w-12 flex items-center justify-center text-3xl rounded-3xl"><i class="fa-solid fa-paperclip"></i></button>
-                            <button onclick="generateImage()" class="h-12 w-12 flex items-center justify-center text-3xl rounded-3xl"><i class="fa-solid fa-image"></i></button>
-                            <button onclick="sendMessage()" class="h-14 w-14 bg-gradient-to-br from-cyan-400 to-pink-500 text-black rounded-3xl flex items-center justify-center text-3xl shadow-[0_0_50px_#00f5ff]"><i class="fa-solid fa-paper-plane"></i></button>
-                        </div>
-                    </div>
+  const div = document.createElement('div');
+  div.className = `p-4 rounded-xl fade-in ${role==='user'?'msg-user':'msg-ai'}`;
+  div.innerHTML = text.replace(/\n/g,'<br>');
+  document.getElementById('messages').appendChild(div);
+  document.getElementById('messages').scrollTop = 999999;
+}
 
-                    <div class="flex justify-center gap-8 mt-6 text-xs uppercase tracking-widest text-white/60">
-                        <button onclick="quickAction('weather')" class="flex items-center gap-1.5">ПОГОДА</button>
-                        <button onclick="quickAction('news')" class="flex items-center gap-1.5">НОВОСТИ</button>
-                        <button onclick="quickAction('space')" class="flex items-center gap-1.5">КОСМОС</button>
-                        <button onclick="quickAction('fact')" class="flex items-center gap-1.5">ФАКТ</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+// === Отправка запроса в Mistral ===
+async function askAI(text) {
+  addMsg('user', text);
+  document.getElementById('status').textContent = "Mistral думает...";
 
-    <!-- MODALS -->
-    <div id="modelsModal" class="hidden fixed inset-0 bg-black/90 flex items-center justify-center z-[999]">
-        <div class="glass w-full max-w-md mx-4 rounded-3xl overflow-hidden">
-            <div class="p-6 border-b flex justify-between items-center">
-                <h2 class="text-3xl font-bold">Модели 2026</h2>
-                <button onclick="hideModelsModal()" class="text-4xl">×</button>
-            </div>
-            <div id="modelsList" class="p-4 space-y-2"></div>
-        </div>
-    </div>
+  try {
+    const res = await fetch(MISTRAL_DEMO_URL, {
+      method:'POST',
+      headers:{
+        "Content-Type":"application/json",
+        "Authorization":"Bearer hf_demo" // публичный демо-токен Hugging Face
+      },
+      body: JSON.stringify({ inputs: text })
+    });
 
-    <div id="themeModal" class="hidden fixed inset-0 bg-black/90 flex items-center justify-center z-[999]">
-        <div class="glass w-full max-w-lg mx-4 rounded-3xl p-8">
-            <h2 class="text-3xl font-bold mb-8">Темы</h2>
-            <div id="themeGallery" class="grid grid-cols-4 gap-4"></div>
-            <button onclick="hideThemeModal()" class="mt-10 w-full py-6 bg-white/10 rounded-3xl text-lg">ЗАКРЫТЬ</button>
-        </div>
-    </div>
+    if(!res.ok){
+      const err = await res.text();
+      throw new Error(`Mistral ошибка: ${res.status} — ${err}`);
+    }
 
-    <div id="imageModal" onclick="if(event.target.id==='imageModal')closeImageModal()" class="hidden fixed inset-0 bg-black/95 flex items-center justify-center z-[1000]">
-        <img id="modalImage" class="max-h-[90vh] rounded-3xl shadow-2xl" onclick="event.stopImmediatePropagation()">
-    </div>
+    const data = await res.json();
+    const reply = data?.generated_text || data?.[0]?.generated_text || "Нет ответа от Mistral";
+    addMsg('assistant', reply);
 
-    <script>
-        // ================================================
-        // МАТРИЦА 2026 — ВСЁ ИСПРАВЛЕНО И РАБОТАЕТ
-        // Grok xAI + Groq + Gemini + все кнопки 100% функциональны
-        // ================================================
+  } catch(err){
+    console.error(err);
+    addMsg('assistant', `Ошибка:\n${err.message}\n\nВозможные причины:\n1. Проблемы с интернетом\n2. Ограничение на бесплатный demo API`);
+  } finally {
+    document.getElementById('status').textContent = 'готов';
+  }
+}
 
-        let currentChatId = null;
-        let chats = [];
-        let messages = {};
-        let currentModel = { provider: "xai", name: "Grok-2026", key: "xai-WWwrxRFfLp8sGqXASFFSChZ5r7xJx63drfy7I3EZNsoqKKe8NqgZGgd6u8AOfXZp75Zdb9P9wqi8U7OA" };
-        
-        const API_KEYS = {
-            xai: "xai-WWwrxRFfLp8sGqXASFFSChZ5r7xJx63drfy7I3EZNsoqKKe8NqgZGgd6u8AOfXZp75Zdb9P9wqi8U7OA",
-            groq: "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",
-            gemini: "AIzaSyCDXRU7c9XP2ZxREWeZeS41Alt2ESXRDRk"
-        };
+// === События ===
+document.getElementById('send').onclick = () => {
+  const input = document.getElementById('input');
+  const text = input.value.trim();
+  if(text){
+    askAI(text);
+    input.value='';
+  }
+};
 
-        let attachments = [];
-        let lastMessage = "";
-        let particlesEnabled = true;
-        let matrixRainEnabled = true;
+document.getElementById('input').onkeydown = e => {
+  if(e.key==='Enter' && !e.shiftKey){
+    e.preventDefault();
+    document.getElementById('send').click();
+  }
+};
 
-        function init() {
-            loadData();
-            if (chats.length === 0) createNewChat();
-            else switchChat(chats[0].id);
+document.getElementById('voice').onclick = () => {
+  if(!('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)){
+    alert('Голосовой ввод не поддерживается');
+    return;
+  }
 
-            initCanvas();
-            initMatrixRain();
-            drawMatrix();                    // ← ИСПРАВЛЕНО: дождь Матрицы теперь работает
-            animateParticles();
-            renderChatsList();
+  const rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+  rec.lang='ru-RU';
+  rec.onresult = e=>{
+    const text = e.results[0][0].transcript;
+    document.getElementById('input').value = text;
+    document.getElementById('send').click();
+  };
+  rec.onerror = ()=>alert('Ошибка голосового ввода');
+  rec.start();
+};
 
-            document.getElementById("userInput").focus();
-            window.addEventListener("resize", resizeAll);
-        }
+document.getElementById('clear').onclick = () => {
+  if(confirm('Очистить чат?')){
+    messages=[];
+    localStorage.removeItem('chat_history');
+    document.getElementById('messages').innerHTML='';
+  }
+};
 
-        function loadData() {
-            chats = JSON.parse(localStorage.getItem("matrix_chats") || "[]");
-            messages = JSON.parse(localStorage.getItem("matrix_messages") || "{}");
-            currentChatId = localStorage.getItem("matrix_currentChatId") || null;
-        }
-
-        function saveData() {
-            localStorage.setItem("matrix_chats", JSON.stringify(chats));
-            localStorage.setItem("matrix_messages", JSON.stringify(messages));
-            localStorage.setItem("matrix_currentChatId", currentChatId);
-        }
-
-        // CHATS
-        function createNewChat() {
-            const id = "chat_" + Date.now();
-            chats.unshift({id, title: "Новый чат", created: Date.now()});
-            messages[id] = [];
-            currentChatId = id;
-            saveData();
-            renderChatsList();
-            switchChat(id);
-        }
-
-        function switchChat(id) {
-            currentChatId = id;
-            saveData();
-            document.getElementById("chatTitle").textContent = chats.find(c => c.id === id).title;
-            renderMessages();
-        }
-
-        function renderChatsList() {
-            const container = document.getElementById("chatsList");
-            container.innerHTML = chats.map(c => `
-                <div onclick="switchChat('${c.id}')" class="px-6 py-4 rounded-3xl flex justify-between items-center ${c.id === currentChatId ? 'bg-white/10' : 'hover:bg-white/5'}">
-                    <span class="truncate">${c.title}</span>
-                    <button onclick="event.stopImmediatePropagation();deleteChat('${c.id}')" class="text-red-400 text-xl">✕</button>
-                </div>
-            `).join("");
-        }
-
-        function deleteChat(id) {
-            if (!confirm("Удалить чат навсегда?")) return;
-            chats = chats.filter(c => c.id !== id);
-            delete messages[id];
-            if (currentChatId === id) createNewChat();
-            saveData();
-            renderChatsList();
-        }
-
-        function renameCurrentChat() {
-            const chat = chats.find(c => c.id === currentChatId);
-            const name = prompt("Новое название:", chat.title);
-            if (name) {
-                chat.title = name;
-                saveData();
-                renderChatsList();
-                document.getElementById("chatTitle").textContent = name;
-            }
-        }
-
-        // MESSAGES
-        function renderMessages() {
-            const container = document.getElementById("messages");
-            container.innerHTML = "";
-            const msgs = messages[currentChatId] || [];
-            msgs.forEach(msg => {
-                const div = document.createElement("div");
-                div.className = `flex ${msg.role === "user" ? "justify-end" : "justify-start"} message`;
-                div.innerHTML = msg.role === "user" ? `
-                    <div class="max-w-[75%] bg-zinc-900 px-7 py-5 rounded-3xl rounded-tr-none text-lg">
-                        ${msg.content}
-                        \( {msg.image ? `<img src=" \){msg.image}" onclick="showImage('${msg.image}')" class="mt-4 rounded-3xl cursor-zoom-in">` : ''}
-                    </div>
-                ` : `
-                    <div class="max-w-[80%]">
-                        <div class="flex items-center gap-3 mb-3">
-                            <div class="w-9 h-9 bg-gradient-to-br from-purple-500 to-cyan-400 rounded-3xl flex items-center justify-center text-white font-bold">✦</div>
-                            <div class="font-medium">${currentModel.name}</div>
-                        </div>
-                        <div class="prose prose-invert bg-zinc-950/70 px-7 py-6 rounded-3xl rounded-tl-none">
-                            ${marked.parse(msg.content)}
-                        </div>
-                        \( {msg.image ? `<img src=" \){msg.image}" onclick="showImage('${msg.image}')" class="mt-4 rounded-3xl cursor-zoom-in">` : ''}
-                    </div>
-                `;
-                container.appendChild(div);
-            });
-            container.scrollTop = container.scrollHeight;
-        }
-
-        async function sendMessage() {
-            const input = document.getElementById("userInput");
-            const text = input.value.trim();
-            if (!text && attachments.length === 0) return;
-
-            addMessage("user", text || "[Вложение]", attachments[0] || null);
-            input.value = "";
-            attachments = [];
-            document.getElementById("attachmentsPreview").innerHTML = "";
-
-            showTypingIndicator();
-
-            const response = await callAI(text || "Расскажи что-нибудь красивое");
-            lastMessage = response;
-            addMessage("assistant", response);
-            removeTypingIndicator();
-            createBurstParticles(55);
-        }
-
-        function addMessage(role, content, image = null) {
-            if (!messages[currentChatId]) messages[currentChatId] = [];
-            messages[currentChatId].push({role, content, image});
-            saveData();
-            renderMessages();
-        }
-
-        function showTypingIndicator() {
-            const el = document.createElement("div");
-            el.id = "typing";
-            el.className = "pl-12 flex items-center gap-4";
-            el.innerHTML = `<div class="flex gap-2"><div class="w-3 h-3 bg-cyan-400 rounded-full animate-bounce"></div><div class="w-3 h-3 bg-cyan-400 rounded-full animate-bounce delay-150"></div><div class="w-3 h-3 bg-cyan-400 rounded-full animate-bounce delay-300"></div></div><span class="text-cyan-400">Grok думает...</span>`;
-            document.getElementById("messages").appendChild(el);
-        }
-
-        function removeTypingIndicator() {
-            const el = document.getElementById("typing");
-            if (el) el.remove();
-        }
-
-        async function callAI(prompt) {
-            // xAI GROK — ПРИОРИТЕТ
-            if (currentModel.provider === "xai") {
-                try {
-                    const res = await fetch("https://api.x.ai/v1/chat/completions", {
-                        method: "POST",
-                        headers: {
-                            "Authorization": `Bearer ${API_KEYS.xai}`,
-                            "Content-Type": "application/json"
-                        },
-                        body: JSON.stringify({
-                            model: "grok-beta",
-                            messages: [{role: "user", content: prompt}],
-                            temperature: 0.9,
-                            max_tokens: 2048
-                        })
-                    });
-                    const data = await res.json();
-                    return data.choices[0].message.content;
-                } catch(e) {}
-            }
-
-            // Fallback Groq
-            try {
-                const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-                    method: "POST",
-                    headers: { "Authorization": `Bearer ${API_KEYS.groq}`, "Content-Type": "application/json" },
-                    body: JSON.stringify({ model: "llama-3.3-70b-versatile", messages: [{role:"user", content:prompt}], temperature:0.85 })
-                });
-                const data = await res.json();
-                return data.choices[0].message.content;
-            } catch(e) {}
-
-            // Демo-режим (работает всегда, даже на file://)
-            return `Матрица отвечает:\n\nТы только что написал: **${prompt}**\n\nЯ здесь. Что дальше, Нео? ✨`;
-        }
-
-        // IMAGE + ATTACH
-        function generateImage() {
-            const p = prompt("Опиши изображение (Flux):", "неоновый киберпанк город ночью");
-            if (!p) return;
-            showTypingIndicator();
-            setTimeout(() => {
-                removeTypingIndicator();
-                const url = `https://picsum.photos/id/${Math.floor(Math.random()*900)}/1024/1024`;
-                addMessage("assistant", `**Flux Schnell**\n\n${p}`, url);
-            }, 1300);
-        }
-
-        function attachFile() {
-            const url = prompt("Вставь URL изображения:", "https://picsum.photos/800");
-            if (!url) return;
-            attachments.push(url);
-            document.getElementById("attachmentsPreview").innerHTML += `<img src="\( {url}" onclick="showImage(' \){url}')" class="h-20 rounded-3xl border border-white/30 cursor-pointer">`;
-        }
-
-        function showImage(src) {
-            document.getElementById("modalImage").src = src;
-            document.getElementById("imageModal").classList.remove("hidden");
-            document.getElementById("imageModal").classList.add("flex");
-        }
-
-        function closeImageModal() {
-            const m = document.getElementById("imageModal");
-            m.classList.add("hidden");
-            m.classList.remove("flex");
-        }
-
-        // VOICE
-        let rec = null;
-        function toggleVoiceInput() {
-            if (!rec) {
-                rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-                rec.lang = "ru-RU";
-                rec.onresult = e => {
-                    document.getElementById("userInput").value = e.results[0][0].transcript;
-                    sendMessage();
-                };
-            }
-            const btn = document.getElementById("voiceBtn");
-            if (btn.style.color === "rgb(239, 68, 68)") {
-                rec.stop();
-                btn.style.color = "";
-            } else {
-                rec.start();
+// Загрузка истории
+messages.forEach(m=>addMsg(m.role, m.text));
+</script>
+</body>
+</html>
